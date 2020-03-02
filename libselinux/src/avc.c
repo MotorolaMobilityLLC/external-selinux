@@ -696,6 +696,8 @@ void avc_audit(security_id_t ssid, security_id_t tsid,
 	       struct av_decision *avd, int result, void *a)
 {
 	access_vector_t denied, audited;
+        char *new_value = NULL, *last = NULL, comm[32] = { 0 }, *avc_backtrace_filter_ele[AVC_BACKTRACE_COMM_NUM] = { NULL };
+	int i = 0, j, fd, ret;
 
 	denied = requested & ~avd->allowed;
 	if (denied)
@@ -710,6 +712,40 @@ void avc_audit(security_id_t ssid, security_id_t tsid,
 	if (!check_avc_ratelimit())
 		return;
 #endif
+
+	if (security_get_backtrace_switch() == 1) {
+		new_value = malloc(sizeof(char *));
+		if (new_value == NULL)
+			goto avc;
+		security_get_backtrace_filter(new_value);
+
+		if (!strcmp(new_value, "all"))
+			kill(getpid(), AVC_BACKTRACE_SIGNAL);
+		else {
+			fd = open("/proc/self/comm", O_RDONLY);
+			if (fd < 0)
+				goto avc;
+			ret = read(fd, comm, sizeof comm -1);
+			close(fd);
+			if (ret < 0)
+				goto avc;
+			for (i = 0; i < AVC_BACKTRACE_COMM_NUM; i++) {
+				if (avc_backtrace_filter_ele[i])
+					avc_backtrace_filter_ele[i] = NULL;
+			}
+
+			while ((i < AVC_BACKTRACE_COMM_NUM) && (avc_backtrace_filter_ele[i] = strtok_r(new_value, ",", &last)) != NULL) {
+				new_value = NULL;
+				i++;
+			}
+			for (j = 0; j < i; j++) {
+				if (avc_backtrace_filter_ele[j] && !strncmp(avc_backtrace_filter_ele[j], comm, strlen(comm)))
+				    kill(getpid(), AVC_BACKTRACE_SIGNAL);
+			}
+		}
+		free(new_value);
+	}
+avc:
 	/* prevent overlapping buffer writes */
 	avc_get_lock(avc_log_lock);
 	snprintf(avc_audit_buf, AVC_AUDIT_BUFSIZE,

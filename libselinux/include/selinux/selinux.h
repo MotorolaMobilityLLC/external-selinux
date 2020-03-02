@@ -335,6 +335,8 @@ extern int security_canonicalize_context_raw(const char * con,
 
 /* Get the enforce flag value. */
 extern int security_getenforce(void);
+extern int security_get_backtrace_switch(void);
+extern int security_get_backtrace_filter(char *avc_backtrace_filter);
 
 /* Set the enforce flag value. */
 extern int security_setenforce(int value);

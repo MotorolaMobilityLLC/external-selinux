@@ -11,6 +11,21 @@
 #include <stdlib.h>
 #include <selinux/selinux.h>
 
+#include <signal.h>
+#include <sys/cdefs.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <unistd.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+
+#define AVC_BACKTRACE_SIGNAL (__SIGRTMIN + 3)
+#define AVC_BACKTRACE_COMM_NUM 5
+
 #ifdef __cplusplus
 extern "C" {
 #endif
