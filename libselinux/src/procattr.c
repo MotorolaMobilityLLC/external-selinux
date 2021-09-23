@@ -25,23 +25,21 @@ static __thread char destructor_initialized;
 /* Bionic and glibc >= 2.30 declare gettid() system call wrapper in unistd.h and
  * has a definition for it */
 #ifdef __BIONIC__
-  #define HAVE_GETTID 1
+  #define OVERRIDE_GETTID 0
 #elif !defined(__GLIBC_PREREQ)
-  #define HAVE_GETTID 0
+  #define OVERRIDE_GETTID 1
 #elif !__GLIBC_PREREQ(2,30)
-  #define HAVE_GETTID 0
+  #define OVERRIDE_GETTID 1
 #else
-  #define HAVE_GETTID 1
+  #define OVERRIDE_GETTID 0
 #endif
 
-static pid_t selinux_gettid(void)
+#if OVERRIDE_GETTID
+static pid_t gettid(void)
 {
-#if HAVE_GETTID
-	return gettid();
-#else
 	return syscall(__NR_gettid);
-#endif
 }
+#endif
 
 static void procattr_thread_destructor(void __attribute__((unused)) *unused)
 {
@@ -96,7 +94,7 @@ static int openattr(pid_t pid, const char *attr, int flags)
 		if (fd >= 0 || errno != ENOENT)
 			goto out;
 		free(path);
-		tid = selinux_gettid();
+		tid = gettid();
 		rc = asprintf(&path, "/proc/self/task/%d/attr/%s", tid, attr);
 	} else {
 		errno = EINVAL;
